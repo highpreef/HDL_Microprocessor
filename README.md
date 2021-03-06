@@ -1,2 +1,2 @@
 # HDL_Microprocessor
-Microprocessor architecture coded in Verilog, targetted at the Basys 3 FPGA.
+Fully functional microprocessor coded in Verilog HDL, targetted at the Basys 3 FPGA. Features a RISC-esque ISA.
