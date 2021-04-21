@@ -1,21 +1,23 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: The University of Edinburgh
+// Engineer: David Jorge
 // 
 // Create Date: 23.02.2021 13:48:10
-// Design Name: 
+// Design Name: Microprocessor
 // Module Name: Timer
-// Project Name: 
-// Target Devices: 
+// Project Name: Microprocessor
+// Target Devices: Basys 3
 // Tool Versions: 
-// Description: 
+// Description: This module is the timer peripheral which raises an interrupt after
+//              a predefined amount of time (default is 100ms). Handles communication
+//              with bus lines (cpu). 
 // 
 // Dependencies: 
 // 
 // Revision:
 // Revision 0.01 - File Created
-// Additional Comments:
+// Additional Comments: This module was provided to us.
 // 
 //////////////////////////////////////////////////////////////////////////////////
 

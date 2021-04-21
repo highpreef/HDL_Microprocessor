@@ -1,15 +1,16 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: University of Edinburgh
+// Engineer: David Jorge
 // 
 // Create Date: 23.02.2021 17:14:48
-// Design Name: 
+// Design Name: Microprocessor
 // Module Name: Bus_Interface_Mouse
-// Project Name: 
-// Target Devices: 
+// Project Name: Microprocessor
+// Target Devices: Basys 3
 // Tool Versions: 
-// Description: 
+// Description: This is the Bus Interface module for the mouse peripheral. Handles
+//              communications between mouse and bus lines (cpu).
 // 
 // Dependencies: 
 // 
@@ -21,21 +22,22 @@
 
 
 module Bus_Interface_Mouse(
-    //standard signals
-    input 			CLK,
-    input			RESET,
-    //BUS
-    inout  [7:0]   	BUS_DATA,
-    input  [7:0] 	BUS_ADDR,
-    input  			BUS_WE,			// This signal goes high when the CPU wants to write to the IO device
-    //Mouse side ports
-    inout			CLK_MOUSE,
-    inout			DATA_MOUSE,
+    //Clock and Reset signals
+    input CLK,
+    input RESET,
+    //BUS Signals
+    inout [7:0] BUS_DATA,
+    input [7:0] BUS_ADDR,
+    input BUS_WE,
+    //Mouse
+    inout CLK_MOUSE,
+    inout DATA_MOUSE,
     //Interrupt & Acknowledge
-    output 			BUS_INTERRUPT_RAISE,
-    input 			BUS_INTERRUPT_ACK
+    output BUS_INTERRUPT_RAISE,
+    input BUS_INTERRUPT_ACK
 	);
-
+    
+    // Mouse Outputs
 	wire [7:0] MouseStatusFull;
 	wire [7:0] MouseX;
 	wire [7:0] MouseDx;
@@ -43,37 +45,42 @@ module Bus_Interface_Mouse(
 	wire [7:0] MouseDy;
 	wire [7:0] MouseScroll;
 
+    // Mouse Interrupt signal
 	wire SendInterrupt;
 
 	MouseTransceiver T (
-		//Standard Inputs
-		.RESET(RESET),
+		//Clock and Reset Inputs
 		.CLK(CLK),
-		//IO - Mouse side
+		.RESET(RESET),
+		//Mouse bidirectional ports
 		.CLK_MOUSE(CLK_MOUSE),
 		.DATA_MOUSE(DATA_MOUSE),
-		// Mouse data information
+		// Mouse outputs
 		.MouseStatusFull(MouseStatusFull),	
 		.MouseX(MouseX),
 		.MOUSE_DX(MouseDx),
 		.MouseY(MouseY),
 		.MOUSE_DY(MouseDy),
 		.MouseScroll(MouseScroll),
+		// Interrupt
 		.SendInterrupt(SendInterrupt)
 	);
 
-	// Raise interrupt
+	// Raise interrupt signal; goes high when interrupt is raised from mouse
 	reg Raise_Interrupt;
 	
+	// Check whether mouse sends interrupt and raise it to cpu. Reset interrupt signal 
+	// when interrupt is acknowledged by cpu.
 	always@(posedge CLK) begin
         if(RESET)
             Raise_Interrupt <= 1'b0;
         else if(SendInterrupt)
             Raise_Interrupt <= 1'b1;
-        else if(BUS_INTERRUPT_ACK) // If interrupt is acknowledged, reset
+        else if(BUS_INTERRUPT_ACK)
             Raise_Interrupt <= 1'b0;
     end
-		
+    
+    // Interrupt assignment
 	assign BUS_INTERRUPT_RAISE = Raise_Interrupt; 
 
     // Top address changed to A7
@@ -90,13 +97,10 @@ module Bus_Interface_Mouse(
 	assign BUS_DATA = (BusInterfaceWE) ? Out : 8'hZZ;
 	assign BufferedBusData = BUS_DATA;
 	
-	//Memory
+	// Interface Mem
 	reg [7:0] Mem [(2**AddrWidth)-1:0];
-	
-	// Initialise the memory for data preloading, initialising variables, and declaring constants
-	initial  $readmemh("C:/Users/DAVID/Microprocessor_Submission/Microprocessor_Submission.srcs/sources_1/new/Mouse.txt", Mem);
     
-    //single port ram
+    // Sequential logic
     always@(posedge CLK) begin
         // Get current mouse data
         Mem[0] <= MouseStatusFull;
@@ -116,7 +120,8 @@ module Bus_Interface_Mouse(
                 BusInterfaceWE <= 1'b1;
         end else
             BusInterfaceWE <= 1'b0;
-            
+        
+        // The 4 lower bits of the address will specify the offset to this memory
         Out <= Mem[BUS_ADDR[3:0]];
     end
     

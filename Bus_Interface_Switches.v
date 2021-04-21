@@ -1,15 +1,17 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: The University of Edinburgh
+// Engineer: David Jorge
 // 
 // Create Date: 05.03.2021 16:34:11
-// Design Name: 
+// Design Name: Microprocessor
 // Module Name: Bus_Interface_Switches
-// Project Name: 
-// Target Devices: 
+// Project Name: Microprocessor
+// Target Devices: Basys 3
 // Tool Versions: 
-// Description: 
+// Description: This Bus Interface module  was added as an extra functionality
+//              to connect the switches peripheral. Handles communications 
+//              between the switches and bus lines (cpu).
 // 
 // Dependencies: 
 // 
@@ -21,18 +23,20 @@
 
 
 module Bus_Interface_Switches(
-    //Standard Signals
+    //Clock Signal
     input CLK,
-    //BUS signals
+    //BUS Signals
     inout [7:0] BUS_DATA,
-    inout [7:0] BUS_ADDR,
-    input BUS_WE, // This signal goes high when the CPU wants to write to the IO device
+    input [7:0] BUS_ADDR,
+    input BUS_WE,
     //Switches
     input [15:0] Switches
     );
     
+    // Top Address is 0xC3
+    // Stores 2*8 bits of data
     parameter BaseAddr = 8'hC2;
-    parameter AddrWidth = 1; // 2 x 8 bits memory
+    parameter AddrWidth = 1;
     
     //Tristate
     wire [7:0] BufferedBusData;
@@ -45,11 +49,9 @@ module Bus_Interface_Switches(
         
     //Memory
     reg [7:0] Mem [(2**AddrWidth)-1:0];;
-        
-    initial  $readmemh("C:/Users/DAVID/Microprocessor_Submission/Microprocessor_Submission.srcs/sources_1/new/Switches.txt", Mem);
     
     always@(posedge CLK) begin
-        // Store current Switches data
+        // Store current Switches input data to bus interface memory
         Mem[0] <= Switches[7:0]; // Lower 8 Switches
         Mem[1] <= Switches[15:8]; // Upper 8 Switches
     
@@ -63,7 +65,8 @@ module Bus_Interface_Switches(
                 BusInterfaceWE <= 1'b1;
         end else
             BusInterfaceWE <= 1'b0;
-            
+        
+        // The 4 lower bits of the address will specify the offset to this memory
         Out <= Mem[BUS_ADDR[3:0]];
     end
 

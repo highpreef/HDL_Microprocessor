@@ -1,15 +1,16 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: The University of Edinburgh
+// Engineer: David Jorge
 // 
 // Create Date: 08.02.2021 15:01:57
-// Design Name: 
+// Design Name: Microprocessor
 // Module Name: Bus_Interface_LEDs
-// Project Name: 
-// Target Devices: 
+// Project Name: Microprocessor
+// Target Devices: Basys 3
 // Tool Versions: 
-// Description: 
+// Description: This is the Bus Interface module for the LEDs peripheral. Handles
+//              communications between the LEDs and bus lines (cpu).
 // 
 // Dependencies: 
 // 
@@ -21,18 +22,20 @@
 
 
 module Bus_Interface_LEDs(
-    //Standard Signals
+    //Clock Signals
     input CLK,
-    //BUS signals
+    //BUS Signals
     inout [7:0] BUS_DATA,
-    inout [7:0] BUS_ADDR,
-    input BUS_WE, // This signal goes high when the CPU wants to write to the IO device
+    input [7:0] BUS_ADDR,
+    input BUS_WE,
     // LEDs
     output reg [15:0] LEDs
     );
     
+    // Top Address is 0xC1
+    // Stores 2*8 bits of data
     parameter BaseAddr = 8'hC0;
-    parameter AddrWidth = 1; // 2 x 8 bits memory
+    parameter AddrWidth = 1;
     
     //Tristate
     wire [7:0] BufferedBusData;
@@ -45,11 +48,9 @@ module Bus_Interface_LEDs(
         
     //Memory
     reg [7:0] Mem [(2**AddrWidth)-1:0];;
-        
-    initial  $readmemh("C:/Users/DAVID/Microprocessor_Submission/Microprocessor_Submission.srcs/sources_1/new/LEDs.txt", Mem);
     
     always@(posedge CLK) begin
-        // Get current LEDs data
+        // Get current LEDs data from bus interface memory
         LEDs[15:8] <= Mem[0]; // Upper 8 LEDs
         LEDs[7:0] <= Mem[1]; // Lower 8 LEDs
     
@@ -64,6 +65,7 @@ module Bus_Interface_LEDs(
         end else
             BusInterfaceWE <= 1'b0;
             
+        // The 4 lower bits of the address will specify the offset to this memory
         Out <= Mem[BUS_ADDR[3:0]];
     end
     

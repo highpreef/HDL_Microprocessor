@@ -1,21 +1,24 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: The University of Edinburgh
+// Engineer: David Jorge
 // 
 // Create Date: 23.02.2021 13:53:36
-// Design Name: 
+// Design Name: Microprocessor
 // Module Name: ALU
-// Project Name: 
-// Target Devices: 
+// Project Name: Microprocessor
+// Target Devices: Basys 3
 // Tool Versions: 
-// Description: 
+// Description: This is the module for the Arithmetic Logic Unit (ALU). Offers
+//              basic and complex arithmetic and logic operations on the 2 inputs
+//              and outputs the result. The ALU_Op_Code signal determinest the
+//              operation to be executed.
 // 
 // Dependencies: 
 // 
 // Revision:
 // Revision 0.01 - File Created
-// Additional Comments:
+// Additional Comments: Added additional logic operations: AND, NAND, OR and XOR
 // 
 //////////////////////////////////////////////////////////////////////////////////
 

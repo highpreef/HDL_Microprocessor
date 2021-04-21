@@ -1,15 +1,17 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: University of Edinburgh
+// Engineer: David Jorge
 // 
 // Create Date: 23.02.2021 13:55:27
-// Design Name: 
+// Design Name: Microprocessor
 // Module Name: Processor
-// Project Name: 
-// Target Devices: 
+// Project Name: Microprocessor
+// Target Devices: Basys 3
 // Tool Versions: 
-// Description: 
+// Description: This module handles the reading and execution of instructions.
+//              It also has control over the BUS line to communicate with the 
+//              peripherals.
 // 
 // Dependencies: 
 // 
@@ -28,23 +30,22 @@ module Processor(
     inout [7:0] BUS_DATA,
     output [7:0] BUS_ADDR,
     output BUS_WE,
-    // ROM signals
+    //ROM signals
     output [7:0] ROM_ADDRESS,
     input [7:0] ROM_DATA,
-    // INTERRUPT signals
+    //INTERRUPT signals
     input [1:0] BUS_INTERRUPTS_RAISE,
     output [1:0] BUS_INTERRUPTS_ACK
     
-    // Testbench outputs
+    // Testbench outputs (NOT USED IN IMPLEMENTATION)
     /*
-    output [7:0] C_State,
-    output [7:0] N_State,
-    output [7:0] Curr_PC,
+    output [7:0] Current_State,
+    output [7:0] Next_State,
+    output [7:0] Current_PC,
     output [7:0] Next_PC,
-    output [1:0] Curr_PCoff,
-    output [1:0] Next_PCoff,
-    output [7:0] Curr_A,
-    output [7:0] Curr_B,
+    output [1:0] Current_PC_offset,
+    output [7:0] Current_Register_A,
+    output [7:0] Current_Register_B,
     output [7:0] ALU_OUT
     */
     );
@@ -119,6 +120,9 @@ module Processor(
     // 11: Return from function call
     // 12: Dereference A
     // 13: Dereference B
+    // EXTRA FUNCTIONALITY:
+    // 14: Load immediate A
+    // 15: Load immediate B
      
     parameter [7:0] //Program thread selection
     IDLE = 8'hF0, //Waits here until an interrupt wakes up the processor.
@@ -154,33 +158,35 @@ module Processor(
     */
     
     // Conditional Jump (Branch)
-    IF_A_EQUALITY_B_GOTO = 8'h40,
-    IF_A_EQUALITY_B_GOTO_0 = 8'h41,
-    IF_A_EQUALITY_B_GOTO_1 = 8'h42,
+    IF_A_EQUALITY_B_GOTO = 8'h40, //The comparison result of ALU is available, decide whether to brach or not.
+    IF_A_EQUALITY_B_GOTO_0 = 8'h41, //Read jump address from instruction
+    IF_A_EQUALITY_B_GOTO_1 = 8'h42, //wait for new op address to settle. end op.
     
     // Uncoditional Jump (GOTO)
-    GOTO = 8'h50,
-    GOTO_0 = 8'h51,
-    GOTO_1 = 8'h52,
+    GOTO = 8'h50, //Increase PC
+    GOTO_0 = 8'h51, //Read jump address from instruction 
+    GOTO_1 = 8'h52, //wait for new op address to settle. end op.
     
     // Uncoditional Jump to IDLE state (redundant)
-    GOTO_IDLE = 8'h53,
+    GOTO_IDLE = 8'h53, // (REDUNDANT) Set next state to IDLE
     
     // Function Call and return
-    FUNCTION_START = 8'h60,
-    RETURN = 8'h61,
-    RETURN_0 = 8'h62,
-    RETURN_1 = 8'h63,
+    FUNCTION_START = 8'h60, // Save current PC+2
+    RETURN = 8'h61, // Wait state for timing purposes
+    RETURN_0 = 8'h62, // Set current PC to saved context
+    RETURN_1 = 8'h63, //wait for new op address to settle. end op.
     
     // Dereferencing
     DE_REFERENCE_A = 8'h70,
     DE_REFERENCE_B = 8'h71,
     DE_REFERENCE_0 = 8'h72,
+    DE_REFERENCE_1 = 8'h73,
+    DE_REFERENCE_2 = 8'h74,
     
     // Load Immediate (Extra Functionality)
-    LOAD_IMMEDIATE_A = 8'h80,
-    LOAD_IMMEDIATE_B = 8'h81,
-    LOAD_IMMEDIATE_0 = 8'h82;
+    LOAD_IMMEDIATE_A = 8'h80, // Load immeadiate to register A from instruction
+    LOAD_IMMEDIATE_B = 8'h81, // Load immeadiate to register B from instruction
+    LOAD_IMMEDIATE_0 = 8'h82; //wait for new op address to settle. end op.
     
     
     //Sequential part of the State Machine.
@@ -448,7 +454,7 @@ module Processor(
             //FUNCTION_START : here, a function is called and the current PC+2 is saved.
             FUNCTION_START: begin
                 NextState = GOTO_0; // Jump to target address
-                NextProgContext = CurrProgCounter + 2; // Save address of the FOLLOWING operation
+                NextProgContext = CurrProgCounter + 2; // Save address of the FOLLOWING operation (PC+2)
             end
             
             ///////////////////////////////////////////////////////////////////////////////////////
@@ -469,27 +475,43 @@ module Processor(
                 NextState = CHOOSE_OPP;
             end
             
-            ///////////////////////////////////////////////////////////////////////////////////////
-            //DE_REFERENCE_A : here starts the dereferencing operation on the A register
+            //set RegSelect to regA(0)
             DE_REFERENCE_A: begin
                 NextState = DE_REFERENCE_0;
-                NextBusAddr = CurrRegA;
                 NextRegSelect = 1'b0;
-            end 
-                
-            ///////////////////////////////////////////////////////////////////////////////////////
-            //DE_REFERENCE_B : here starts the dereferencing operation on the B register
-            DE_REFERENCE_B: begin
-                NextState = DE_REFERENCE_0;
-                NextBusAddr = CurrRegB;
-                NextRegSelect = 1'b1;
             end
             
-            //DE_REFERENCE_0 : this is the wait state; give time for data to be read
+            //dereference register B            
+            //set RegSelect to regB(1)                
+            DE_REFERENCE_B: begin
+                NextState = DE_REFERENCE_0;
+                NextRegSelect = 1'b1;
+            end       
+            
+            //set addr of RAM to regA or regB according to RegSelct
+            //this must be done 2 cycles ahead
             DE_REFERENCE_0: begin
-                NextState = READ_FROM_MEM_2;
-                NextProgCounter = CurrProgCounter + 1;
+                NextState = DE_REFERENCE_1;
+                NextBusAddr = (!NextRegSelect)? CurrRegA: CurrRegB;// update addr from register A OR B, should be 2cycle head than write?
+            end            
+
+            // wait for RAM Data to arrive
+            // update PC+1, must be done 2 cycle ahead
+            DE_REFERENCE_1: begin
+                NextState = DE_REFERENCE_2;
+                NextProgCounter = CurrProgCounter + 1;//Increment the program counter here. This must be done 2 clock cycles ahead
             end
+            
+            // write RAM data back to RegA or RegB
+            // RegSelect 0 for regA,1 for Reg
+            // Return choose_op
+            DE_REFERENCE_2: begin
+                NextState = CHOOSE_OPP;
+                if(!CurrRegSelect)
+                    NextRegA = BusDataIn;
+                else
+                    NextRegB = BusDataIn;
+            end 
             
             ///////////////////////////////////////////////////////////////////////////////////////
             //LOAD_IMMEDIATE_A : Here begins the loading of an 8 bit immediate to reg A.
@@ -522,14 +544,13 @@ module Processor(
     
     // Testbench outputs assignment
     /*
-    assign C_State = CurrState;
-    assign N_State = NextState;
-    assign Curr_PC = CurrProgCounter;
+    assign Current_State = CurrState;
+    assign Next_State = NextState;
+    assign Current_PC = CurrProgCounter;
     assign Next_PC = NextProgCounter;
-    assign Curr_PCoff = CurrProgCounterOffset;
-    assign Next_PCoff = NextProgCounterOffset;
-    assign Curr_A = CurrRegA;
-    assign Curr_B = CurrRegB;
+    assign Curr_PC_offset = CurrProgCounterOffset;
+    assign Current_Register_A = CurrRegA;
+    assign Current_Register_B = CurrRegB;
     assign ALU_OUT = AluOut;
     */
     

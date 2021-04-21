@@ -1,15 +1,16 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: The University of Edinburgh
+// Engineer: David Jorge
 // 
 // Create Date: 23.02.2021 21:20:02
-// Design Name: 
+// Design Name: Microprocessor
 // Module Name: Bus_Interface_SevenSeg
-// Project Name: 
-// Target Devices: 
+// Project Name: Microprocessor
+// Target Devices: Basys 3
 // Tool Versions: 
-// Description: 
+// Description: This is the Bus Interface module for the SevenSeg peripheral. Handles
+//              communications between Seven Segment Display and bus lines (cpu).
 // 
 // Dependencies: 
 // 
@@ -21,13 +22,13 @@
 
 
 module Bus_Interface_SevenSeg(
-    //Standard signals
+    //Clock signal
 	input CLK,
-	//BUS signals
+	//BUS Signals
 	inout [7:0] BUS_DATA,
 	input [7:0] BUS_ADDR,
-	input BUS_WE, // This signal goes high when the CPU wants to write to the IO device
-	//SevenSeg signals
+	input BUS_WE,
+	//SevenSeg
 	output wire	[3:0] SEG_SELECT,
     output wire [7:0] LED_OUT
 	);
@@ -60,12 +61,9 @@ module Bus_Interface_SevenSeg(
     
     //Memory
     reg [7:0] Mem [(2**AddrWidth)-1:0];
-        
-    // Initialise the memory for data preloading, initialising variables, and declaring constants
-    initial  $readmemh("C:/Users/DAVID/Microprocessor_Submission/Microprocessor_Submission.srcs/sources_1/new/SevenSeg.txt", Mem);
     
     always@(posedge CLK) begin
-        // Get current mouse data
+        // Get current SegSeven data from bus interface memory
         Seg7[7:0] <= Mem[0]; // Left 2 Seg7 Displays
         Seg7[15:8] <= Mem[1]; // Right 2 Seg7 Displays
     
@@ -79,7 +77,8 @@ module Bus_Interface_SevenSeg(
                 BusInterfaceWE <= 1'b1;
         end else
             BusInterfaceWE <= 1'b0;
-            
+        
+        // The 4 lower bits of the address will specify the offset to this memory
         Out <= Mem[BUS_ADDR[3:0]];
     end
     

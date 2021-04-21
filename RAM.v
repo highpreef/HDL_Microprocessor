@@ -1,15 +1,17 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: The University of Edinburgh
+// Engineer: David Jorge
 // 
 // Create Date: 23.02.2021 12:40:16
-// Design Name: 
+// Design Name: Microprocessor
 // Module Name: RAM
-// Project Name: 
-// Target Devices: 
+// Project Name: Microprocessor
+// Target Devices: Basys 3
 // Tool Versions: 
-// Description: 
+// Description: This is the RAM module which has 128 bytes of memory for cpu use.
+//              Handles communication with cpu through bus lines (separate from 
+//              instruction memory)
 // 
 // Dependencies: 
 // 
@@ -21,7 +23,7 @@
 
 
 module RAM(
-    //standard signals
+    //Clock signal
     input CLK,
     //BUS signals
     inout [7:0] BUS_DATA,
@@ -45,7 +47,7 @@ module RAM(
     reg [7:0] Mem [2**RAMAddrWidth-1:0];
     
     // Initialise the memory for data preloading, initialising variables, and declaring constants
-    initial $readmemh("C:/Users/DAVID/Microprocessor_Submission/Microprocessor_Submission.srcs/sources_1/new/RAM_DEMO.txt", Mem);
+    initial $readmemh("Complete_Demo_RAM.txt", Mem);
     
     //single port ram
     always@(posedge CLK) begin
